@@ -5,6 +5,8 @@ import BackButton from '@/components/BackButton.vue';
 import PulseLoader from 'vue-spinner/src/PulseLoader.vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { db } from '@/firebase/init.js';
 const route = useRoute();
 const router = useRouter();
 const id = route.params.id;
@@ -14,23 +16,36 @@ const state = reactive({
   job: {},
   isLoading: true
 });
-const deleteJob = async () =>{
-  try{
+
+const deleteJob = async () => {
+  try {
     const confirm = window.confirm("Are you sure you want to delete this job?");
-    if(!confirm) return;
-     await axios.delete(`/api/jobs/${id}`);
-      toast.success("Job deleted successfully!");
-      router.push('/jobs');
-    }catch(err){
-      console.error("Error deleting job:",err);
-      toast.error("Failed to delete job. Please try again.");
+    if (!confirm) return;
+    await deleteDoc(doc(db, "jobs", id));
+    // await axios.delete(`/api/jobs/${id}`);
+    toast.success("Job deleted successfully!");
+    router.push('/jobs');
+  } catch (err) {
+    console.error("Error deleting job:", err);
+    toast.error("Failed to delete job. Please try again.");
 
   }
 }
+const getJob = async () => {
+  const docRef = doc(db, "jobs", id);
+  const docSnap = await getDoc(docRef);
+
+  if (docSnap.exists()) {
+    state.job = { ...docSnap.data(), id: docSnap.id };
+  } else {
+    console.log("No such document!");
+  }
+}
+
+
 onMounted(async () => {
   try {
-    const response = await axios.get(`/api/jobs/${id}`);
-    state.job = response.data;
+    await getJob();
     console.log(state.job);
   } catch (error) {
     console.error("Error fetching job:", error);
@@ -41,7 +56,7 @@ onMounted(async () => {
 </script>
 
 <template>
- <BackButton />
+  <BackButton />
   <section v-if="!state.isLoading"
     class="bg-green-50">
     <div class="container m-auto py-10 px-6">
@@ -85,7 +100,7 @@ onMounted(async () => {
             <h2 class="text-2xl">{{ state.job.company.name }}</h2>
 
             <p class="my-2">
-             {{ state.job.company.description }}
+              {{ state.job.company.description }}
             </p>
 
             <hr class="my-4" />
@@ -98,7 +113,8 @@ onMounted(async () => {
 
             <h3 class="text-xl">Contact Phone:</h3>
 
-            <p class="my-2 bg-green-100 p-2 font-bold">{{ state.job.company.contactPhone }}
+            <p class="my-2 bg-green-100 p-2 font-bold">{{
+              state.job.company.contactPhone }}
             </p>
           </div>
 
